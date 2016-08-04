@@ -1,0 +1,399 @@
+<!doctype html>
+<html>
+<head>
+	<title>Harvard University HIT</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script src="jspsych/jspsych.js"></script>
+	<script src="jspsych/plugins/jspsych-text.js"></script>
+	<script src="jspsych/plugins/jspsych-space-daw-stim.js"></script>
+	<script src="jspsych/plugins/jspsych-space-daw-alien-stim.js"></script>
+	<script src="jspsych/plugins/jspsych-space-daw-two-aliens-stim.js"></script>
+	<script src="jspsych/plugins/jspsych-survey-text.js"></script>
+	<script src="jspsych/plugins/jspsych-html.js"></script>
+	<script src="jspsych/plugins/jspsych-instructions.js"></script>
+	<script src="jspsych/plugins/jspsych-call-function.js"></script>
+	<script src="additional-functions.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+	<link href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/black-tie/jquery-ui.min.css" rel="stylesheet" type="text/css"></link>
+	<link href="jspsych/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+</head>
+<body>
+</body>
+<script>
+
+var workerId = getQueryVariable("workerId");
+var hitId = getQueryVariable("hitId");
+var assignmentId = getQueryVariable("assignmentId");
+
+var nrpracticetrials = 25;
+var nrtrials = 125;
+var nralienstrials = 20;
+
+// set up variables as
+var max = 0.75;
+var min = 0.25;
+var sd = 0.025;
+
+if (Math.random() > .5) {
+	if(Math.random() > .5) {
+		var p_ps = [0.6, 0.4];
+	} else {
+		var p_ps = [0.4, 0.6];
+	}
+	if(Math.random() > .5) {
+		p_ps = [p_ps, [0.25, 0.75]];
+	} else {
+		p_ps = [p_ps, [0.75, 0.25]];
+	}
+} else {
+	if(Math.random() > .5) {
+		var p_ps = [0.25, .75];
+	} else {
+		var p_ps = [0.75, 0.25];
+	}
+	if(Math.random() > .5) {
+		p_ps = [p_ps, [0.4, 0.6]];
+	} else {
+		p_ps = [p_ps, [0.6, 0.4]];	
+	}
+}
+
+if (Math.random() > .5) {
+	if(Math.random() > .5) {
+		var ps = [0.6, 0.4];
+	} else {
+		var ps = [0.4, 0.6];
+	}
+	if(Math.random() > .5) {
+		ps = [ps, [0.25, 0.75]];
+	} else {
+		ps = [ps, [0.75, 0.25]];
+	}
+} else {
+	if(Math.random() > .5) {
+		var ps = [0.25, .75];
+	} else {
+		var ps = [0.75, 0.25];
+	}
+	if(Math.random() > .5) {
+		ps = [ps, [0.4, 0.6]];
+	} else {
+		ps = [ps, [0.6, 0.4]];	
+	}
+}
+
+var gaussian = [];
+for (i = 0; i < 1000; i++) {
+	gaussian[i] = createMemberInNormalDistribution(0,sd);
+}
+
+var p_alien_1_ps = [1, 1, 1, 0, 1];
+var p_alien_2_ps = [0, 1, 0, 0, 0];
+
+var sex = '';
+var age = 0;
+var score = 0;
+
+var subid = '';
+
+/* jspsych blocks */
+
+var change_colors = {
+	type: 'call-function',
+	func: function(){ 
+		$('.jspsych-display-element').css('background-color', 'black');
+		$('.jspsych-display-element').css('color', 'white');
+	}
+}
+var change_colors_back = {
+	type: 'call-function',
+	func: function(){ 
+		$('.jspsych-display-element').css('background-color', 'white');
+		$('.jspsych-display-element').css('color', 'black');
+	}
+}
+
+var welcome_block = {
+	type: "text",
+	text: "<div class='center-content'><br><br><br><br>Welcome to this HIT.<br><br>You will play a  game in which you fly spaceships to different planets to get space treasure.<br><br>Press any key to continue",
+};
+
+var id_question = ["Worker ID:"];
+var id_block = {
+	type: 'survey-text',
+	questions: [id_question],
+	preamble: ["<div align=center>Please enter your Amazon Mechanical Turk Worker ID below.<br><br>If you do not enter it accurately, we will not be able to pay you.</div>"],
+};
+var check_id_block = { 
+	chunk_type: 'while', 
+	timeline: [id_block], 
+	continue_function: function(data){ 
+		answers = data[0].responses.split(":"); 
+		id = answers[1].split('"')[1];
+		if (id){ 
+			subid = id;
+			id_trial = new Array(1);
+			id_trial[0] = {
+				subid: subid
+			}
+			save_data(id_trial,"space_daw_subid")
+			return false; 
+		} else {
+			alert("Please provide your Amazon Mechanical Turk Worker ID."); 
+			return true; 
+		}
+	},
+	timing_post_trial: 0,
+};
+
+var check_consent = function(elem) {
+	if ($('#consent_checkbox').is(':checked')) {
+		return true;
+	}
+	else {
+		alert("If you wish to participate, you must check the box next to the statement 'I agree to participate in this study.'");
+		return false;
+	}
+	return false;
+};
+var consent_block = {
+	type:'html',
+	pages: [{url: "consent.html", cont_btn: "start", check_fn: check_consent}],
+	on_finish: function(data){
+		start_instructions = data.time_elapsed;
+	}
+};
+
+var instructions_1a_block = {
+	type: "instructions",
+	pages: instructions_1a_text(),
+	key_forward: "j",
+	key_backward: "f",
+	show_clickable_nav: true,
+}
+var instructions_1b_block = {
+	type: "instructions",
+	pages: instructions_1b_text(),
+	key_forward: "j",
+	key_backward: "f",
+	show_clickable_nav: true,
+}
+var instructions_1c_block = {
+	type: "instructions",
+	pages: instructions_1c_text(),
+	key_forward: "j",
+	key_backward: "f",
+	show_clickable_nav: true,
+}
+var instructions_1d_block = {
+	type: "instructions",
+	pages: instructions_1d_text(),
+	key_forward: "j",
+	key_backward: "f",
+	show_clickable_nav: true,
+}
+
+var alien_1_practice_block = {
+	type: "space-daw-alien-stim",
+	choices: "space",
+	p: function() {
+		return p_alien_1_ps.splice(0,1)
+	},
+	timing_post_trial: 0,
+	nrtrials: 5,
+};
+var alien_2_practice_block = {
+	type: "space-daw-alien-stim",
+	choices: "space",
+	p: function() {
+		return p_alien_2_ps.splice(0,1)
+	},
+	timing_post_trial: 0,
+	nrtrials: 5,
+	state_name: "yellow",
+};
+var aliens_practice_block = {
+	type: "space-daw-two-aliens-stim",
+	ps: [0.1, 0.9],
+	timing_post_trial: 0,
+	nrtrials: nralienstrials,
+};
+
+var space_practice_block = {
+	type: "space-daw-stim",
+	ps: function() { 
+		alldata = jsPsych.data.getTrialsOfType('space-daw-stim');
+		if (alldata.length==0) {
+			return p_ps
+		} else {
+			//drifting probabilities
+			for (j = 0; j < 2; j++) {
+				for (k = 0; k < 2; k++) {
+					p_ps[j][k] = p_ps[j][k]+gaussian[Math.floor(Math.random()*gaussian.length)];
+					p_ps[j][k] = Math.min(p_ps[j][k],Math.max(1.5 - p_ps[j][k], .25));
+					p_ps[j][k] = Math.max(p_ps[j][k], Math.min(0.5 - p_ps[j][k], .75));
+				}
+			}
+			return p_ps
+		}
+	},
+	timing_post_trial: 0,
+	practice: 1,
+	timing_response: -1,
+	nrtrials: nrpracticetrials,
+	subid: function(){
+		return subid
+	},
+};
+
+var instructions_2_block = {
+	type: "instructions",
+	pages: instructions_2_text(),
+	key_forward: "j",
+	key_backward: "f",
+	show_clickable_nav: true,
+	on_finish: function(data){
+	}
+}
+
+var space_block = {
+	type: "space-daw-stim",
+	ps: function() {
+		alldata = jsPsych.data.getTrialsOfType('space-daw-stim');
+		if (alldata.length==nrpracticetrials) {
+			return ps
+		} else {
+			//drifting probabilities
+			for (j = 0; j < 2; j++) {
+				for (k = 0; k < 2; k++) {
+					ps[j][k] = ps[j][k]+gaussian[Math.floor(Math.random()*gaussian.length)];
+					ps[j][k] = Math.min(ps[j][k],Math.max(1.5 - ps[j][k], .25));
+					ps[j][k] = Math.max(ps[j][k], Math.min(0.5 - ps[j][k], .75));
+				}
+			}
+			return ps
+		}
+	},
+	timing_post_trial: 0,
+	//timing_response: -1,
+	nrtrials: nrtrials,
+	subid: function(){
+		return subid
+	},
+};
+
+var save_data_block = {
+	type: 'call-function',
+	func: function(){
+		save_data(jsPsych.data.getTrialsOfType("space-daw-stim"),"space_daw_data");
+	}
+}
+
+var demographics_block = {
+	type: "survey-text", 
+	preamble: ["Please provide us with some information about yourself:"], 
+	questions: [["Age", "Sex (m/f)"]],
+};
+var check_demographics_block = { 
+	chunk_type: 'while', 
+	timeline: [demographics_block], 
+	continue_function: function(data){ 
+		answers = data[0].responses.split(":"); 
+		age_ans = answers[1].split('"')[1]; 
+		sex_ans = answers[2].split('"')[1];
+		totaltime = data[0].time_elapsed;
+		if (jQuery.isNumeric(age_ans) && (sex_ans == 'm' || sex_ans == 'f')){ 
+			age = parseInt(age_ans);
+			sex = sex_ans;
+			// compute score
+			alldawtrials = jsPsych.data.getTrialsOfType("space-daw-stim");
+			score = alldawtrials[alldawtrials.length-1].score;
+			return false; 
+		} else { 
+			if (!jQuery.isNumeric(age)) 
+				alert("Please enter your age as a number (make sure to remove any spaces)."); 
+			if (sex != 'm' && sex != 'f') 
+				alert("You entered your sex incorrectly. Please write \"f\" if you are female and \"m\" if you are male."); 
+			return true; 
+		}
+	}
+}
+
+var save_subinfo_block = {
+	type: 'call-function',
+	func: function(){
+		var lasttrialdata = jsPsych.data.getLastTrialData();
+		var surveydata = jsPsych.data.getTrialsOfType("survey-likert");
+		subinfo = new Array(1);
+		subinfo[0] = {
+			subid: subid,
+			workerid: workerId,
+			assignmentid: assignmentId,
+			age: age,
+			sex: sex,
+			score: score,
+			time_elapsed: lasttrialdata.time_elapsed,
+		};
+		save_data(subinfo,"space_daw_subinfo");
+	}
+}
+
+var debriefing_block = {
+	type:'html',
+	pages: [{url: "debriefing.html", cont_btn: "continue"}]
+};
+
+var score_block = {
+	type: 'text',
+	text: function(){
+		scoreindollar = score/100;
+		if (scoreindollar > 0){
+			textscore = scoreindollar.toFixed(2);		
+			var text = "<br><br><br><br>You won an additional $" + textscore + " on top of your regular payment for this HIT.<br><br>We will process this as soon as possible.<br><br>Press any key to continue";
+		} else {
+			var text = "<br><br><br><br>You did not win additional payment during the experiment.<br><br>Press any key to continue";
+		}
+		return text
+	},
+};
+
+var end_block = {
+	type:'html',
+	pages: [{url: "end.html"}]
+};
+
+/* create experiment definition array */
+var experiment = [];
+
+experiment.push(change_colors);
+experiment.push(check_id_block);
+experiment.push(consent_block);
+experiment.push(welcome_block);
+experiment.push(instructions_1a_block);
+experiment.push(alien_1_practice_block);
+experiment.push(instructions_1b_block);
+experiment.push(alien_2_practice_block);
+experiment.push(instructions_1c_block);
+experiment.push(aliens_practice_block);
+experiment.push(instructions_1d_block);
+experiment.push(space_practice_block);
+experiment.push(instructions_2_block);
+experiment.push(space_block);
+experiment.push(save_data_block);
+experiment.push(check_demographics_block);
+experiment.push(save_subinfo_block);
+experiment.push(debriefing_block);
+experiment.push(score_block);
+experiment.push(change_colors_back);
+experiment.push(end_block);
+
+jsPsych.preloadImages(images, function(){ startExperiment(); });
+
+/* start the experiment */
+function startExperiment(){
+	jsPsych.init({
+		experiment_structure: experiment,
+	});
+}
+</script>
+</html>
