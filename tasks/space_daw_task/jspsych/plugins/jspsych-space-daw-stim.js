@@ -353,7 +353,8 @@
 			var kill_listeners = function(){
 				// kill keyboard listeners
 				if(typeof keyboardListener !== 'undefined'){
-					jsPsych.pluginAPI.cancelKeyboardResponse(keyboardListener);
+					//jsPsych.pluginAPI.cancelKeyboardResponse(keyboardListener);
+					jsPsych.pluginAPI.cancelAllKeyboardResponses();
 				}
 			}
 			
